@@ -18,7 +18,10 @@ idlfile.close()
 outfile = 0
 
 def printInterface(interface):
-    outfile.write('  class %s {\n' % (interface.name))
+    outfile.write('  class %s\n' % (interface.name))
+    outfile.write('  {\n')
+    outfile.write('  public:\n')
+
     for m in interface.methods:
         if m.returns.name == 'void':
             outfile.write('    virtual void %s(' % m.name)
@@ -67,7 +70,8 @@ def printMod(module):
     outfile.write('#pragma once\n\n')
     outfile.write('#include "IDLUtils.h"\n\n')
     outfile.write('using namespace std;\n\n')
-    outfile.write('namespace %s {\n' % module.name)
+    outfile.write('namespace %s\n' % module.name)
+    outfile.write('{\n')
     module.for_each_typedef(printTypeDef)
     module.for_each_enum(printEnum)
     module.for_each_struct(printStruct)

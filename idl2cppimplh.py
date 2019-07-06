@@ -6,7 +6,7 @@ else:
     print("Please supply .idl filepath")
     exit(1)
 
-outextension = ".cpp"
+outextension = ".h"
 
 from idl_parser import parser
 parser_ = parser.IDLParser()
@@ -18,8 +18,11 @@ idlfile.close()
 outfile = 0
 
 def printInterface(interface):
+    outfile.write('class %s_impl: public %s\n' % (interface.name, interface.name))
+    outfile.write('{\n')
+    outfile.write('public:\n')
     for m in interface.methods:
-        outfile.write('%s %s_impl::%s(' % (m.returns.name, interface.name, m.name))
+        outfile.write('  %s %s(' % (m.returns.name, m.name))
 
         firstarg = 1
         for a in m.arguments:
@@ -33,13 +36,13 @@ def printInterface(interface):
             else:
                 outfile.write('const %s %s' % (a.type, a.name))
 
-        outfile.write(')\n{\n}\n\n')
+        outfile.write(');\n')
+    outfile.write('};\n\n')
 
 def printMod(module):
     global outfile
     outfile = open(module.name + "_impl" + outextension, "w")
-    outfile.write('#include "%s.h"\n' % (module.name))
-    outfile.write('#include "%s_impl.h"\n\n' % (module.name))
+    outfile.write('#include "%s.h"\n\n' % (module.name))
     outfile.write('using namespace std;\n')
     outfile.write('using namespace %s;\n\n' % (module.name))
     module.for_each_interface(printInterface)

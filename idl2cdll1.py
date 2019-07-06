@@ -39,6 +39,7 @@ def printMod(module):
     outfile = open(module.name + "_cdll1" + outextension, "w")
     outfile.write('#pragma once\n\n')
     outfile.write('#include "%s.h"\n' % module.name)
+    outfile.write('#include "%s_impl.h"\n' % module.name)
     outfile.write('#include "IDLUtils.h"\n\n')
     outfile.write('using namespace std;\n')
     outfile.write('using namespace %s;\n\n' % module.name)
