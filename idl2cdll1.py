@@ -19,9 +19,9 @@ outfile = 0
 
 def printInterface(interface):
     outfile.write('  __declspec(dllexport) %s *__stdcall %s_new();\n' % (interface.name, interface.name))
-    outfile.write('  __declspec(dllexport) void __stdcall %s_delete(const %s *instance);\n\n' % (interface.name, interface.name))
+    outfile.write('  __declspec(dllexport) void __stdcall %s_delete(%s *instance);\n\n' % (interface.name, interface.name))
     for m in interface.methods:
-        outfile.write('  __declspec(dllexport) %s __stdcall %s_%s(const %s *instance' % (m.returns.name, interface.name, m.name, interface.name))
+        outfile.write('  __declspec(dllexport) %s __stdcall %s_%s(%s *instance' % (m.returns.name, interface.name, m.name, interface.name))
 
         for a in m.arguments:
             outfile.write(", ")
