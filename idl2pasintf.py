@@ -17,25 +17,28 @@ idlfile.close()
 
 outfile = 0
 
+def printFunctionArguments(m):
+    firstarg = 1
+    for a in m.arguments:
+        if firstarg:
+            firstarg = 0
+        else:
+            outfile.write("; ")
+
+        if 'out' in a.direction:
+            outfile.write('var %s: %s' % (a.name, a.type))
+        else:
+            outfile.write('const %s: %s' % (a.name, a.type))
+
 def printInterface(interface):
-    outfile.write('  %s = interface\n' % (interface.name))
+    outfile.write('  I%s = interface\n' % (interface.name))
     for m in interface.methods:
         if m.returns.name == 'void':
             outfile.write('    procedure %s(' % m.name)
         else:
             outfile.write('    function %s(' % m.name)
 
-        firstarg = 1
-        for a in m.arguments:
-            if firstarg:
-                firstarg = 0
-            else:
-                outfile.write("; ")
-
-            if 'out' in a.direction:
-                outfile.write('var %s: %s' % (a.name, a.type))
-            else:
-                outfile.write('const %s: %s' % (a.name, a.type))
+        printFunctionArguments(m)
 
         if m.returns.name == 'void':
             outfile.write(');\n')
