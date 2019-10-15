@@ -1,12 +1,17 @@
 import sys
 
+targetfolder = "."
+
 if len(sys.argv) > 1:
     idlfilepath = sys.argv[1]
+    if len(sys.argv) > 2:
+        targetfolder = sys.argv[2]
 else:
     print("Please supply .idl filepath")
     exit(1)
 
 outextension = ".pas"
+unitsuffix = "Intf"
 
 from idl_parser import parser
 parser_ = parser.IDLParser()
@@ -69,8 +74,8 @@ def printEnum(enum):
 
 def printMod(module):
     global outfile
-    outfile = open(module.name + outextension, "w")
-    outfile.write('unit %s;\n\n' % module.name)
+    outfile = open(targetfolder + "/" + module.name + unitsuffix + outextension, "w")
+    outfile.write('unit %s%s;\n\n' % (module.name, unitsuffix))
     outfile.write('interface\n\n')
     outfile.write('uses\n')
     outfile.write('  IDLUtils;\n\n')
