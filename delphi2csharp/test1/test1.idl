@@ -1,0 +1,7 @@
+
+module TestModule {
+  interface Communicator {
+    void SetID(integer ID);
+    integer GetID();
+  };
+};

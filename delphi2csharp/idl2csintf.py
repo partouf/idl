@@ -1,12 +1,17 @@
 import sys
 
+targetfolder = "."
+
 if len(sys.argv) > 1:
     idlfilepath = sys.argv[1]
+    if len(sys.argv) > 2:
+        targetfolder = sys.argv[2]
 else:
     print("Please supply .idl filepath")
     exit(1)
 
-outextension = ".pas"
+outextension = ".cs"
+unitsuffix = "Intf"
 
 from idl_parser import parser
 parser_ = parser.IDLParser()
@@ -17,32 +22,39 @@ idlfile.close()
 
 outfile = 0
 
+def translateType(typename):
+    if typename == 'integer':
+        return 'int'
+    else:
+        return typename
+
+def printFunctionArguments(m):
+    firstarg = 1
+    for a in m.arguments:
+        if firstarg:
+            firstarg = 0
+        else:
+            outfile.write(", ")
+
+        if 'out' in a.direction:
+            outfile.write('out %s %s' % (translateType(a.type.name), a.name))
+        else:
+            outfile.write('%s %s' % (translateType(a.type.name), a.name))
+
 def printInterface(interface):
-    outfile.write('  %s = interface\n' % (interface.name))
+    outfile.write('  interface I%s\n' % (interface.name))
+    outfile.write('  {\n')
     for m in interface.methods:
         if m.returns.name == 'void':
-            outfile.write('    procedure %s(' % m.name)
+            outfile.write('    void %s(' % m.name)
         else:
-            outfile.write('    function %s(' % m.name)
+            outfile.write('    %s %s(' % (translateType(m.returns.name), m.name))
 
-        firstarg = 1
-        for a in m.arguments:
-            if firstarg:
-                firstarg = 0
-            else:
-                outfile.write("; ")
+        printFunctionArguments(m)
 
-            if 'out' in a.direction:
-                outfile.write('var %s: %s' % (a.name, a.type))
-            else:
-                outfile.write('const %s: %s' % (a.name, a.type))
+        outfile.write(');\n')
 
-        if m.returns.name == 'void':
-            outfile.write(');\n')
-        else:
-            outfile.write('): %s;\n' % m.returns.name)
-
-    outfile.write('  end;\n\n')
+    outfile.write('  }\n')
 
 def printStruct(struct):
     outfile.write('  %s = record\n' % struct.name)
@@ -66,18 +78,17 @@ def printEnum(enum):
 
 def printMod(module):
     global outfile
-    outfile = open(module.name + outextension, "w")
-    outfile.write('unit %s;\n\n' % module.name)
-    outfile.write('interface\n\n')
-    outfile.write('uses\n')
-    outfile.write('  IDLUtils;\n\n')
-    outfile.write('type\n')
+    outfile = open(targetfolder + "/" + module.name + unitsuffix + outextension, "w")
+    outfile.write('namespace %s\n' % (module.name))
+    outfile.write('{\n')
+    outfile.write('  using System;\n\n')
+
     module.for_each_typedef(printTypeDef)
     module.for_each_enum(printEnum)
     module.for_each_struct(printStruct)
     module.for_each_interface(printInterface)
-    outfile.write('implementation\n\n')
-    outfile.write('end.\n')
+
+    outfile.write('}\n')
     outfile.close()
 
 global_module = parser_.load(idl_str)
