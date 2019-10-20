@@ -1,5 +1,7 @@
 program test1;
 
+{$APPTYPE CONSOLE}
+
 uses
   IDLUtils in '..\shared\IDLUtils.pas',
   TestModule_DLLHandler,
@@ -26,5 +28,5 @@ begin
     ExitCode := 1;
   end;
 
-  TTestModule.Unload;
+//  TTestModule.Unload;
 end.
