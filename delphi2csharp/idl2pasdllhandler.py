@@ -12,6 +12,7 @@ outextension = ".pas"
 classsuffix = "_DLLHandler"
 unitsuffix = "_DLLHandler"
 varnameDLLHandle = "_DLLHandle"
+callingConvention = "cdecl"
 
 from idl_parser import parser
 parser_ = parser.IDLParser()
@@ -87,8 +88,8 @@ def writeDllMethodArgumentDecl(m):
             outfile.write('const %s: %s' % (a.name, getDelphiTypeForCType(a.type.name)))
 
 def writeDllMethodsDecl(interface):
-    outfile.write('  %s = function: IntPtr; cdecl;\n' % (getDllMethodVariableDefinitionNameByName(interface, 'NewObject')))
-    outfile.write('  %s = procedure(const ObjPtr: IntPtr); cdecl;\n' % (getDllMethodVariableDefinitionNameByName(interface, 'FreeObject')))
+    outfile.write('  %s = function: IntPtr; %s;\n' % (getDllMethodVariableDefinitionNameByName(interface, 'NewObject'), callingConvention))
+    outfile.write('  %s = procedure(const ObjPtr: IntPtr); %s;\n' % (getDllMethodVariableDefinitionNameByName(interface, 'FreeObject'), callingConvention))
 
     for m in interface.methods:
         outfile.write('  %s = ' % (getDllMethodVariableDefinitionName(interface, m)))
@@ -104,7 +105,7 @@ def writeDllMethodsDecl(interface):
         else:
             outfile.write('): %s;' % (getDelphiTypeForCType(m.returns.name)))
 
-        outfile.write(' cdecl;\n')
+        outfile.write(' %s;\n' % callingConvention)
 
 def writeDllMethodVariables(interface):
     outfile.write('  %s: %s;\n' % (getDllMethodVariableNameByName(interface, 'NewObject'), getDllMethodVariableDefinitionNameByName(interface, 'NewObject')))

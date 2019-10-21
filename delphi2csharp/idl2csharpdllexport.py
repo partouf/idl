@@ -10,6 +10,7 @@ else:
 
 outextension = ".cs"
 classsuffix = "_CDll0"
+callingConvention = "Cdecl"
 
 from idl_parser import parser
 parser_ = parser.IDLParser()
@@ -60,14 +61,14 @@ def writeArgumentPassing(m):
         outfile.write('%s' % (a.name))
 
 def writeNew(interface):
-    outfile.write('        [DllExport(CallingConvention = CallingConvention.StdCall)]\n')
+    outfile.write('        [DllExport(CallingConvention = CallingConvention.%s)]\n' % callingConvention)
     outfile.write('        public static int %s()\n' % (getDllMethodExternalNameByName(interface, 'NewObject')))
     outfile.write('        {\n')
     outfile.write('            return %s.New%s();\n' % (currentModule.name, interface.name))
     outfile.write('        }\n\n')
 
 def writeFree(interface):
-    outfile.write('        [DllExport(CallingConvention = CallingConvention.StdCall)]\n')
+    outfile.write('        [DllExport(CallingConvention = CallingConvention.%s)]\n' % callingConvention)
     outfile.write('        public static void %s(int ObjPtr)\n' % (getDllMethodExternalNameByName(interface, 'FreeObject')))
     outfile.write('        {\n')
     outfile.write('            %s.Free%s(ObjPtr);\n' % (currentModule.name, interface.name))
@@ -81,7 +82,7 @@ def printImplementation(interface):
     writeFree(interface)
 
     for m in interface.methods:
-        outfile.write('        [DllExport(CallingConvention = CallingConvention.StdCall)]\n')
+        outfile.write('        [DllExport(CallingConvention = CallingConvention.%s)]\n' % callingConvention)
         if m.returns.name == 'void':
             outfile.write('        public static void %s(int ObjPtr' % (getDllMethodExternalName(interface, m)))
         else:

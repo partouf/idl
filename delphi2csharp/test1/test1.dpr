@@ -28,5 +28,5 @@ begin
     ExitCode := 1;
   end;
 
-//  TTestModule.Unload;
+  TTestModule.Unload;
 end.
