@@ -26,8 +26,10 @@ def shouldBeMarshalled(typename):
     return (typename == 'string')
 
 def getTypeTranslation(typename):
-    if (typename == 'integer'):
+    if typename == 'integer':
         return "int"
+    elif typename == 'boolean':
+        return 'bool'
     else:
         return typename
 
