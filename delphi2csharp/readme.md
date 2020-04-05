@@ -1,0 +1,4 @@
+Howto
+=====
+
+./test.bat
