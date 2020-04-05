@@ -1,5 +1,7 @@
 @echo off
 
+pip install -r ../requirements.txt
+
 cd test1
 
 python ../idl2pasintf.py test1.idl
