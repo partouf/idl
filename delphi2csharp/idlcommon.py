@@ -4,3 +4,6 @@ def getDllMethodExternalNameByName(interface, name):
 
 def getDllMethodExternalName(interface, m):
     return getDllMethodExternalNameByName(interface, m.name)
+
+def getDllLoadMethodExternalName(module):
+    return "%s_Load" % (module.name)

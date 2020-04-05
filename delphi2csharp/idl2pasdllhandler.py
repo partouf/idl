@@ -1,6 +1,7 @@
 import sys
 from idlcommon import getDllMethodExternalName
 from idlcommon import getDllMethodExternalNameByName
+from idlcommon import getDllLoadMethodExternalName
 
 if len(sys.argv) > 1:
     idlfilepath = sys.argv[1]
@@ -51,6 +52,12 @@ def writePostprocessDelphiTypeToCType(varname, typename):
 
 def getDLLHandleVarname(module):
     return '%s%s' % (varnameDLLHandle, module.name)
+
+def getDLLLoadMethodHandleVarname(module):
+    return '_%s' % (module.name)
+
+def getDllLoadMethodDefinitionName(module):
+    return 'TFunc%sLoad' % (module.name) 
 
 def getDllMethodVariableNameByName(interface, name):
     return "_%s_%s" % (interface.name, name)
@@ -143,6 +150,11 @@ def writeDllLoading(module):
     outfile.write('  %s := LoadLibrary(\'%s.so\');\n' % (getDLLHandleVarname(module), module.name))
     outfile.write('  if %s = 0 then raise EDLLLoadError.Create(\'DLL %s.so could not be loaded\');\n' % (getDLLHandleVarname(module), module.name))
     outfile.write('  {$ENDIF};\n\n')
+
+def writeDllDefaultLoadMethod(module):
+    outfile.write('  %s := %s(GetProcAddress(%s, \'%s\'));\n' % (getDLLLoadMethodHandleVarname(module), getDllLoadMethodDefinitionName(module), getDLLHandleVarname(module), getDllLoadMethodExternalName(module)))
+    outfile.write('  if not Assigned(%s) then raise EDLLMethodMissing.Create(\'Missing method %s in %s.dll\');\n' % (getDLLLoadMethodHandleVarname(module), getDllLoadMethodExternalName(module), module.name))
+    outfile.write('  %s();\n\n' % (getDLLLoadMethodHandleVarname(module)))
 
 def writeDllMethodLoading(module, interface):
     outfile.write('  %s := %s(GetProcAddress(%s, \'%s\'));\n' % (getDllMethodVariableNameByName(interface, 'NewObject'), getDllMethodVariableDefinitionNameByName(interface, 'NewObject'), getDLLHandleVarname(module), getDllMethodExternalNameByName(interface, 'NewObject')))
@@ -252,6 +264,7 @@ def writeInitializeDLL(module):
     outfile.write('begin\n')
     outfile.write('  if %s <> 0 then Exit;\n\n' % (getDLLHandleVarname(module)))
     writeDllLoading(module)
+    writeDllDefaultLoadMethod(module)
     module.for_each_interface(printDllMethodLoading)
     outfile.write('end;\n')
 
@@ -302,11 +315,13 @@ def printMod(module):
     outfile.write('  {$ENDIF};\n\n')
 
     outfile.write('type\n')
+    outfile.write('  %s = procedure(); cdecl;\n' % (getDllLoadMethodDefinitionName(module)))
     module.for_each_interface(writeDllMethodsDecl)
     outfile.write('\n')
 
     outfile.write('var\n')
     writeDllVariableDecl(currentModule)
+    outfile.write('  %s: %s;\n' % (getDLLLoadMethodHandleVarname(module), getDllLoadMethodDefinitionName(module)))
     module.for_each_interface(writeDllMethodVariables)
     outfile.write('\n')
 
