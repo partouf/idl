@@ -101,10 +101,7 @@ def writeMethodCallArguments(m):
     outfile.write('FObjPtr')
     for a in m.arguments:
         outfile.write(", ")
-        if needsProcessing(a.type.name) or ('out' in a.direction):
-            outfile.write('_%s' % (a.name))
-        else:
-            outfile.write('%s' % (a.name))
+        outfile.write('%s' % (a.name))
 
 def printImplementation(interface):
     outfile.write('constructor T%s%s.Create;\n' % (interface.name, classsuffix))
@@ -131,20 +128,16 @@ def printImplementation(interface):
         else:
             outfile.write('): %s;\n' % m.returns.name)
 
-        firstarg = 1
-        if needsProcessing(m.returns.name):
-            firstarg = 0
-            outfile.write("var\n")
-            writeVarDelphiTypeToCType('Result', m.returns.name)
-
         for a in m.arguments:
-            if needsProcessing(a.type.name) or ('out' in a.direction):
+            if ('out' in a.direction):
                 if firstarg:
                     outfile.write("var\n")
                     firstarg = 0
                 writeVarDelphiTypeToCType(a.name, a.type.name)
 
         outfile.write('begin\n')
+
+        # todo, do something with out params?
 
         if m.returns.name == 'void':
             outfile.write('  T%s_DLLHandler.%s(' % (interface.name, m.name))
