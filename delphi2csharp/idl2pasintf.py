@@ -1,4 +1,5 @@
 import sys
+import uuid
 
 targetfolder = "."
 
@@ -37,6 +38,7 @@ def printFunctionArguments(m):
 
 def printInterface(interface):
     outfile.write('  I%s = interface\n' % (interface.name))
+    outfile.write('    [\'{%s}\']\n\n' % (str(uuid.uuid4()).upper()))
     for m in interface.methods:
         if m.returns.name == 'void':
             outfile.write('    procedure %s(' % m.name)
