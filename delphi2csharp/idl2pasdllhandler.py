@@ -2,6 +2,7 @@ import sys
 from idlcommon import getDllMethodExternalName
 from idlcommon import getDllMethodExternalNameByName
 from idlcommon import getDllLoadMethodExternalName
+from idlcommon import getDllExceptionMethodExternalName
 
 if len(sys.argv) > 1:
     idlfilepath = sys.argv[1]
@@ -27,7 +28,7 @@ currentModule = 0
 
 def getDelphiTypeForCType(typename):
     if typename.lower() == 'string':
-        return 'PChar'
+        return 'PWideChar'
     return typename
 
 def needsProcessing(typename):
@@ -40,7 +41,7 @@ def writeVarDelphiTypeToCType(varname, typename):
 
 def writePreprocessDelphiTypeToCType(varname, typename):
     if needsProcessing(typename):
-        outfile.write('  _%s := PChar(%s);\n' % (varname, varname))
+        outfile.write('  _%s := PWideChar(%s);\n' % (varname, varname))
     else:
         outfile.write('  _%s := %s;\n' % (varname, varname))
 
@@ -54,10 +55,16 @@ def getDLLHandleVarname(module):
     return '%s%s' % (varnameDLLHandle, module.name)
 
 def getDLLLoadMethodHandleVarname(module):
-    return '_%s' % (module.name)
+    return '_%sLoad' % (module.name)
 
 def getDllLoadMethodDefinitionName(module):
     return 'TFunc%sLoad' % (module.name) 
+
+def getDllExceptionMethodHandleVarName(module, excdetail):
+    return '_%sGetException%s' % (module.name, excdetail)
+
+def getDllExceptionMethodDefinitionName(module, excdetail):
+    return 'TFunc%sGetException%s' % (module.name, excdetail)
 
 def getDllMethodVariableNameByName(interface, name):
     return "_%s_%s" % (interface.name, name)
@@ -151,20 +158,25 @@ def writeDllLoading(module):
     outfile.write('  if %s = 0 then raise EDLLLoadError.Create(\'DLL %s.so could not be loaded\');\n' % (getDLLHandleVarname(module), module.name))
     outfile.write('  {$ENDIF};\n\n')
 
+def writeDllGetProcAddress(module, varname, funcdef, externalname):
+    outfile.write('  %s := %s(GetProcAddress(%s, \'%s\'));\n' % (varname, funcdef, getDLLHandleVarname(module), externalname))
+    outfile.write('  if not Assigned(%s) then raise EDLLMethodMissing.Create(\'Missing method %s in %s.dll\');\n' % (varname, externalname, module.name))
+
 def writeDllDefaultLoadMethod(module):
-    outfile.write('  %s := %s(GetProcAddress(%s, \'%s\'));\n' % (getDLLLoadMethodHandleVarname(module), getDllLoadMethodDefinitionName(module), getDLLHandleVarname(module), getDllLoadMethodExternalName(module)))
-    outfile.write('  if not Assigned(%s) then raise EDLLMethodMissing.Create(\'Missing method %s in %s.dll\');\n' % (getDLLLoadMethodHandleVarname(module), getDllLoadMethodExternalName(module), module.name))
+    writeDllGetProcAddress(module, getDLLLoadMethodHandleVarname(module), getDllLoadMethodDefinitionName(module), getDllLoadMethodExternalName(module))
     outfile.write('  %s();\n\n' % (getDLLLoadMethodHandleVarname(module)))
 
+def writeDllExceptionMethodLoading(module):
+    writeDllGetProcAddress(module, getDllExceptionMethodHandleVarName(module, 'Class'), getDllExceptionMethodDefinitionName(module, 'Class'), getDllExceptionMethodExternalName(module, 'Class'))
+    writeDllGetProcAddress(module, getDllExceptionMethodHandleVarName(module, 'Message'), getDllExceptionMethodDefinitionName(module, 'Message'), getDllExceptionMethodExternalName(module, 'Message'))
+    writeDllGetProcAddress(module, getDllExceptionMethodHandleVarName(module, 'Stacktrace'), getDllExceptionMethodDefinitionName(module, 'Stacktrace'), getDllExceptionMethodExternalName(module, 'Stacktrace'))
+
 def writeDllMethodLoading(module, interface):
-    outfile.write('  %s := %s(GetProcAddress(%s, \'%s\'));\n' % (getDllMethodVariableNameByName(interface, 'NewObject'), getDllMethodVariableDefinitionNameByName(interface, 'NewObject'), getDLLHandleVarname(module), getDllMethodExternalNameByName(interface, 'NewObject')))
-    outfile.write('  if not Assigned(%s) then raise EDLLMethodMissing.Create(\'Missing method %s in %s.dll\');\n\n' % (getDllMethodVariableNameByName(interface, 'NewObject'), getDllMethodExternalNameByName(interface, 'NewObject'), module.name))
-    outfile.write('  %s := %s(GetProcAddress(%s, \'%s\'));\n' % (getDllMethodVariableNameByName(interface, 'FreeObject'), getDllMethodVariableDefinitionNameByName(interface, 'FreeObject'), getDLLHandleVarname(module), getDllMethodExternalNameByName(interface, 'FreeObject')))
-    outfile.write('  if not Assigned(%s) then raise EDLLMethodMissing.Create(\'Missing method %s in %s.dll\');\n\n' % (getDllMethodVariableNameByName(interface, 'FreeObject'), getDllMethodExternalNameByName(interface, 'FreeObject'), module.name))
-    
+    writeDllGetProcAddress(module, getDllMethodVariableNameByName(interface, 'NewObject'), getDllMethodVariableDefinitionNameByName(interface, 'NewObject'), getDllMethodExternalNameByName(interface, 'NewObject'))
+    writeDllGetProcAddress(module, getDllMethodVariableNameByName(interface, 'FreeObject'), getDllMethodVariableDefinitionNameByName(interface, 'FreeObject'), getDllMethodExternalNameByName(interface, 'FreeObject'))
+
     for m in interface.methods:
-        outfile.write('  %s := %s(GetProcAddress(%s, \'%s\'));\n' % (getDllMethodVariableName(interface, m), getDllMethodVariableDefinitionName(interface, m), getDLLHandleVarname(module), getDllMethodExternalName(interface, m)))
-        outfile.write('  if not Assigned(%s) then raise EDLLMethodMissing.Create(\'Missing method %s in %s.dll\');\n\n' % (getDllMethodVariableName(interface, m), m.name, module.name))
+        writeDllGetProcAddress(module, getDllMethodVariableNameByName(interface, m.name), getDllMethodVariableDefinitionNameByName(interface, m.name), getDllMethodExternalNameByName(interface, m.name))
 
 def writeDllFree(module):
     outfile.write('  FreeLibrary(%s);\n' % getDLLHandleVarname(module))
@@ -223,18 +235,26 @@ def printImplementation(interface):
                 writePreprocessDelphiTypeToCType(a.name, a.type.name)
 
         outfile.write('\n')
+        outfile.write('  try\n')
 
         if m.returns.name == 'void':
-            outfile.write('  %s(' % (getDllMethodVariableName(interface, m)))
+            outfile.write('    %s(' % (getDllMethodVariableName(interface, m)))
         else:
             if needsProcessing(m.returns.name):
-                outfile.write('  _Result := %s(' % (getDllMethodVariableName(interface, m)))
+                outfile.write('    _Result := %s(' % (getDllMethodVariableName(interface, m)))
             else:
-                outfile.write('  Result := %s(' % (getDllMethodVariableName(interface, m)))
+                outfile.write('    Result := %s(' % (getDllMethodVariableName(interface, m)))
 
         writeMethodCallArguments(m)
 
         outfile.write(');\n')
+
+        outfile.write('  except\n')
+        outfile.write('    on E: Exception do\n')
+        outfile.write('    begin\n')
+        outfile.write('      raise EDLLBoundaryExternalException.Create(_MySharedLibGetExceptionMessage(), _MySharedLibGetExceptionClass(), _MySharedLibGetExceptionStacktrace());\n')
+        outfile.write('    end;\n')
+        outfile.write('  end;\n')
 
         outfile.write('\n')
 
@@ -265,6 +285,7 @@ def writeInitializeDLL(module):
     outfile.write('  if %s <> 0 then Exit;\n\n' % (getDLLHandleVarname(module)))
     writeDllLoading(module)
     writeDllDefaultLoadMethod(module)
+    writeDllExceptionMethodLoading(module)
     module.for_each_interface(printDllMethodLoading)
     outfile.write('end;\n')
 
@@ -308,6 +329,7 @@ def printMod(module):
     outfile.write('implementation\n\n')
 
     outfile.write('uses\n')
+    outfile.write('  SysUtils,\n')
     outfile.write('  {$IFDEF MSWINDOWS}\n')
     outfile.write('  Windows\n')
     outfile.write('  {$ELSE}\n')
@@ -316,12 +338,18 @@ def printMod(module):
 
     outfile.write('type\n')
     outfile.write('  %s = procedure(); cdecl;\n' % (getDllLoadMethodDefinitionName(module)))
+    outfile.write('  %s = function: PWideChar; cdecl;\n' % (getDllExceptionMethodDefinitionName(module, 'Class')))
+    outfile.write('  %s = function: PWideChar; cdecl;\n' % (getDllExceptionMethodDefinitionName(module, 'Message')))
+    outfile.write('  %s = function: PWideChar; cdecl;\n' % (getDllExceptionMethodDefinitionName(module, 'Stacktrace')))
     module.for_each_interface(writeDllMethodsDecl)
     outfile.write('\n')
 
     outfile.write('var\n')
     writeDllVariableDecl(currentModule)
     outfile.write('  %s: %s;\n' % (getDLLLoadMethodHandleVarname(module), getDllLoadMethodDefinitionName(module)))
+    outfile.write('  %s: %s;\n' % (getDllExceptionMethodHandleVarName(module, 'Class'), getDllExceptionMethodDefinitionName(module, 'Class')))
+    outfile.write('  %s: %s;\n' % (getDllExceptionMethodHandleVarName(module, 'Message'), getDllExceptionMethodDefinitionName(module, 'Message')))
+    outfile.write('  %s: %s;\n' % (getDllExceptionMethodHandleVarName(module, 'Stacktrace'), getDllExceptionMethodDefinitionName(module, 'Stacktrace')))
     module.for_each_interface(writeDllMethodVariables)
     outfile.write('\n')
 

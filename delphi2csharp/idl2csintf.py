@@ -118,7 +118,6 @@ def printMod(module):
     outfile.write('{\n')
     outfile.write('    using System;\n')
     outfile.write('    using System.Collections.Generic;\n')
-    outfile.write('    using Unity;\n')
     outfile.write('    using IDLInterop;\n\n')
 
     module.for_each_typedef(printTypeDef)

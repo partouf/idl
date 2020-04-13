@@ -7,3 +7,6 @@ def getDllMethodExternalName(interface, m):
 
 def getDllLoadMethodExternalName(module):
     return "%s_Load" % (module.name)
+
+def getDllExceptionMethodExternalName(module, excdetail):
+    return '%sGetException%s' % (module.name, excdetail)

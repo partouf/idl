@@ -1,6 +1,7 @@
 import sys
 from idlcommon import getDllMethodExternalName
 from idlcommon import getDllMethodExternalNameByName
+from idlcommon import getDllExceptionMethodExternalName
 
 if len(sys.argv) > 1:
     idlfilepath = sys.argv[1]
@@ -76,6 +77,43 @@ def writeFree(interface):
     outfile.write('            %s.Free%s(ObjPtr);\n' % (currentModule.name, interface.name))
     outfile.write('        }\n\n')
 
+def writeDLLBoundaryExceptionMethods(module):
+    outfile.write('    public static class DLLBoundaryHelper\n')
+    outfile.write('    {\n')
+    outfile.write('        private static string exceptionClass;\n')
+    outfile.write('        private static string exceptionMessage;\n')
+    outfile.write('        private static string exceptionStacktrace;\n')
+    outfile.write('\n')
+    outfile.write('        [DllExport(CallingConvention = CallingConvention.Cdecl)]\n')
+    outfile.write('        [return: MarshalAs(UnmanagedType.LPWStr)]\n')
+    outfile.write('        public static string %s()\n' % (getDllExceptionMethodExternalName(module, 'Class')))
+    outfile.write('        {\n')
+    outfile.write('            return exceptionClass;\n')
+    outfile.write('        }\n')
+    outfile.write('\n')
+    outfile.write('        [DllExport(CallingConvention = CallingConvention.Cdecl)]\n')
+    outfile.write('        [return: MarshalAs(UnmanagedType.LPWStr)]\n')
+    outfile.write('        public static string %s()\n' % (getDllExceptionMethodExternalName(module, 'Message')))
+    outfile.write('        {\n')
+    outfile.write('            return exceptionMessage;\n')
+    outfile.write('        }\n')
+    outfile.write('\n')
+    outfile.write('        [DllExport(CallingConvention = CallingConvention.Cdecl)]\n')
+    outfile.write('        [return: MarshalAs(UnmanagedType.LPWStr)]\n')
+    outfile.write('        public static string %s()\n' % (getDllExceptionMethodExternalName(module, 'Stacktrace')))
+    outfile.write('        {\n')
+    outfile.write('            return exceptionStacktrace;\n')
+    outfile.write('        }\n')
+    outfile.write('\n')
+    outfile.write('        public static void SetException(Exception e)\n')
+    outfile.write('        {\n')
+    outfile.write('            exceptionClass = e.GetType().Name;\n')
+    outfile.write('            exceptionMessage = e.Message;\n')
+    outfile.write('            exceptionStacktrace = e.StackTrace.ToString();\n')
+    outfile.write('        }\n')
+    outfile.write('    }\n')
+    outfile.write('\n')
+
 def printImplementation(interface):
     outfile.write('    public static class %sExports\n' % (interface.name))
     outfile.write('    {\n')
@@ -97,15 +135,22 @@ def printImplementation(interface):
         outfile.write(')\n')
 
         outfile.write('        {\n')
-        outfile.write('            var obj = %s.Get%s(ObjPtr);\n' % (currentModule.name, interface.name))
+        outfile.write('            try\n')
+        outfile.write('            {\n')
+
+        outfile.write('                var obj = %s.Get%s(ObjPtr);\n' % (currentModule.name, interface.name))
 
         if m.returns.name == 'void':
-            outfile.write('            obj.%s(' % (m.name))
+            outfile.write('                obj.%s(' % (m.name))
         else:
-            outfile.write('            return obj.%s(' % (m.name))
+            outfile.write('                return obj.%s(' % (m.name))
         writeArgumentPassing(m)
         outfile.write(');\n')
 
+        outfile.write('            } catch(Exception e) {\n')
+        outfile.write('                DLLBoundaryHelper.SetException(e);\n')
+        outfile.write('                throw e;\n')
+        outfile.write('            }\n')
         outfile.write('        }\n\n')
 
     outfile.write('    }\n')
@@ -119,6 +164,8 @@ def printMod(module):
     outfile.write('{\n')
     outfile.write('    using System;\n')
     outfile.write('    using System.Runtime.InteropServices;\n\n')
+
+    writeDLLBoundaryExceptionMethods(module)
 
     module.for_each_interface(printImplementation)
 
