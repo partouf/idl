@@ -192,6 +192,8 @@ def writeMethodCallArguments(m):
             outfile.write('%s' % (a.name))
 
 def printImplementation(interface):
+    module = currentModule
+
     outfile.write('class function T%s%s.NewObject: IntPtr;\n' % (interface.name, classsuffix))
     outfile.write('begin\n')
     outfile.write('  Result := _%s();\n' % (getDllMethodExternalNameByName(interface, 'NewObject')))
@@ -252,7 +254,7 @@ def printImplementation(interface):
         outfile.write('  except\n')
         outfile.write('    on E: Exception do\n')
         outfile.write('    begin\n')
-        outfile.write('      raise EDLLBoundaryExternalException.Create(_MySharedLibGetExceptionMessage(), _MySharedLibGetExceptionClass(), _MySharedLibGetExceptionStacktrace());\n')
+        outfile.write('      raise EDLLBoundaryExternalException.Create(%s(), %s(), %s());\n' % (getDllExceptionMethodHandleVarName(module, 'Message'), getDllExceptionMethodHandleVarName(module, 'Class'), getDllExceptionMethodHandleVarName(module, 'Stacktrace')))
         outfile.write('    end;\n')
         outfile.write('  end;\n')
 
